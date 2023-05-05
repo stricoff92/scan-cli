@@ -1,4 +1,4 @@
-# Terminal Document Management System
+# CLI Document Management System
 
 ```bash
 # set env variable
