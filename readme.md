@@ -1,11 +1,12 @@
 # Linux CLI Document Management System
 
 ## Features
- - Uses SANE backend
- - Single & multiple document mode
- - Saved documents are searchable via:
-   - meta tags
-   - OCR text
+ - SANE backend for scanning images
+ - Tesseract OCR engine for searching scanned documents
+ - Single & multiple document scan mode
+ - Search documents with arbitrary meta tags
+
+<hr>
 
 ```bash
 # set env variable
@@ -35,3 +36,8 @@ scancli scan -n 'paystub-feb-2023-1' -l 2023 paystub 'XYZ Corp'
 scancli scan -n 'tax-return-2023' -l 2023 tax --many
 
 ```
+
+<hr>
+
+![](document.gif)
+
