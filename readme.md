@@ -1,5 +1,12 @@
 # Linux CLI Document Management System
 
+## Features
+ - Uses SANE backend
+ - Single & multiple document mode
+ - Saved documents are searchable via:
+   - meta tags
+   - OCR text
+
 ```bash
 # set env variable
 export SCANNER_DEFAULT_DEVICE='escl:http://localhost:60000'
@@ -21,10 +28,10 @@ sudo apt install tesseract-ocr
 -c --color Gray|Color                # color mode (default = Gray)
 
 # scan usage
-python3 main.py scan
-python3 main.py scan --resolution 300
-python3 main.py scan -n 'paystub-feb-2023-1' --ocr
-python3 main.py scan -n 'paystub-feb-2023-1' -l 2023 paystub 'XYZ Corp'
-python3 main.py scan -n 'tax-return-2023' -l 2023 tax --many
+scancli scan
+scancli scan --resolution 300
+scancli scan -n 'paystub-feb-2023-1' --ocr
+scancli scan -n 'paystub-feb-2023-1' -l 2023 paystub 'XYZ Corp'
+scancli scan -n 'tax-return-2023' -l 2023 tax --many
 
 ```
