@@ -1,6 +1,6 @@
 
 """
-    scancli scan [--name name] [-label label, ...] [--ocr]
+    Frontend for SANE scanimage program
 """
 
 import argparse
