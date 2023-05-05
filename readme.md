@@ -1,8 +1,11 @@
-# CLI Document Management System
+# Linux CLI Document Management System
 
 ```bash
 # set env variable
 export SCANNER_DEFAULT_DEVICE='escl:http://localhost:60000'
+
+# add bin to path
+export PATH="$PATH:/path/to/scan-cli/bin"
 
 # install OCR engine
 sudo apt install tesseract-ocr
