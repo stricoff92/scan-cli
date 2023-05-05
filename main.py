@@ -5,9 +5,11 @@
 
 import argparse
 import datetime as dt
+import json
 import os
 import os.path
 import pathlib
+import re
 import sys
 from typing import List, Optional
 import uuid
@@ -24,6 +26,12 @@ OUT_DIR = os.path.join(pathlib.Path(__file__).parent, 'data')
 
 def get_default_file_name():
     return 'scan_at_' + dt.datetime.now().strftime("%Y-%m-%d_%H:%M") + "_" + str(uuid.uuid4())[:6]
+
+def clean_ocr_text(v: str) -> str:
+    text = ""
+    for l in v.split("\n"):
+        text += ''.join(c for c in l if ord(c) <= 127 and c != '\n') + " "
+    return re.sub(' +', ' ', text)
 
 def command_scan(
     device: str,
@@ -77,9 +85,21 @@ def command_scan(
     if many:
         pass
     else:
-        meta_file_full_path = os.path.join(
-            OUT_DIR, full_out_file + ".json"
-        )
+        meta_file_full_path = full_out_file + ".json"
+        data = {
+            'labels':labels,
+        }
+        if ocr:
+            ocr_out_file = f'/tmp/{uuid.uuid4()}'
+            print("command " + f'tesseract {full_out_file} {ocr_out_file}')
+            print("exit code", os.system(f'tesseract {full_out_file} {ocr_out_file}'))
+            data['ocr'] = ''
+            with open(ocr_out_file  + ".txt") as f:
+                data['ocr'] = clean_ocr_text(f.read())
+            os.remove(ocr_out_file + ".txt")
+        with open(meta_file_full_path, 'w') as f:
+            json.dump(data, f)
+
 
 
 def main():
