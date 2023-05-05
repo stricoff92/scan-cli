@@ -22,6 +22,7 @@ USABLE_MODES = (
     'Gray', 'Color'
 )
 OUT_DIR = os.path.join(pathlib.Path(__file__).parent, 'data')
+print("OUT_DIR", OUT_DIR)
 
 
 def get_default_file_name():
@@ -47,6 +48,10 @@ def command_scan(
     out_file_name = file_name if file_name is not None else get_default_file_name()
     if '.' in out_file_name:
         print("error: file name cannot contain '.'")
+        sys.exit(128)
+
+    if ' ' in out_file_name:
+        print("error: file name cannot contain ' '")
         sys.exit(128)
 
     command = f"scanimage -d '{device}' --resolution {resolution} --mode {'Color' if color else 'Gray' }"
@@ -77,7 +82,7 @@ def command_scan(
         )
 
     print("executing command " + command)
-    os.system(command)
+    print("exit code ", os.system(command))
     if original_cwd:
         os.chdir(original_cwd)
 
@@ -91,8 +96,9 @@ def command_scan(
         }
         if ocr:
             ocr_out_file = f'/tmp/{uuid.uuid4()}'
-            print("command " + f'tesseract {full_out_file} {ocr_out_file}')
-            print("exit code", os.system(f'tesseract {full_out_file} {ocr_out_file}'))
+            ocr_command = f'tesseract {full_out_file} {ocr_out_file}'
+            print("executing command " + ocr_command)
+            print("exit code", os.system(ocr_command))
             data['ocr'] = ''
             with open(ocr_out_file  + ".txt") as f:
                 data['ocr'] = clean_ocr_text(f.read())
@@ -127,6 +133,7 @@ def main():
             print(f"Error: invalid resolution. Use: {USABLE_RESOLUTIONS}")
             sys.exit(128)
 
+        print('arguments ', args)
         command_scan(
             device_name,
             args.name,
