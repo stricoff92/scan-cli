@@ -4,6 +4,7 @@
 """
 
 import argparse
+from collections import Counter
 import datetime as dt
 import json
 import os
@@ -22,7 +23,6 @@ USABLE_MODES = (
     'Gray', 'Color'
 )
 OUT_DIR = os.path.join(pathlib.Path(__file__).parent, 'data')
-print("OUT_DIR", OUT_DIR)
 
 
 def get_default_file_name():
@@ -31,7 +31,7 @@ def get_default_file_name():
 def clean_ocr_text(v: str) -> str:
     text = ""
     for l in v.split("\n"):
-        text += ''.join(c for c in l if ord(c) <= 127 and c != '\n') + " "
+        text += ''.join(c for c in l if ord(c) <= 127) + " "
     return re.sub(' +', ' ', text)
 
 def command_scan(
@@ -42,6 +42,7 @@ def command_scan(
     ocr: bool,
     many: bool,
     color: bool,
+    verbose: bool,
 ):
     original_cwd = None
 
@@ -67,6 +68,8 @@ def command_scan(
         )
 
         original_cwd = os.getcwd()
+        if verbose:
+            print("RUNNING COMMAND: cd " + OUT_DIR)
         os.chdir(OUT_DIR)
 
     else:
@@ -81,24 +84,36 @@ def command_scan(
             f' -o \'{full_out_file}\''
         )
 
-    print("executing command " + command)
-    print("exit code ", os.system(command))
+    if verbose:
+        print("RUNNING COMMAND: " + command)
+    elif not many:
+        command += " > /dev/null 2>&1"
+    exit_code = os.system(command)
+    if verbose:
+        print("exit code ", exit_code)
     if original_cwd:
+        if verbose:
+            print("RUNNING COMMAND: cd " + original_cwd)
         os.chdir(original_cwd)
 
     # write meta data files
     if many:
         pass
     else:
-        meta_file_full_path = full_out_file + ".json"
+        meta_file_full_path = full_out_file + ".meta.json"
         data = {
             'labels':labels,
         }
         if ocr:
             ocr_out_file = f'/tmp/{uuid.uuid4()}'
             ocr_command = f'tesseract {full_out_file} {ocr_out_file}'
-            print("executing command " + ocr_command)
-            print("exit code", os.system(ocr_command))
+            if verbose:
+                print("executing command " + ocr_command)
+            else:
+                ocr_command += " > /dev/null 2>&1"
+            exit_code = os.system(ocr_command)
+            if verbose:
+                print("exit code", exit_code)
             data['ocr'] = ''
             with open(ocr_out_file  + ".txt") as f:
                 data['ocr'] = clean_ocr_text(f.read())
@@ -106,14 +121,54 @@ def command_scan(
         with open(meta_file_full_path, 'w') as f:
             json.dump(data, f)
 
+def command_list_files(fullpaths: bool):
+    for fname in os.listdir(OUT_DIR):
+        if re.search('\.\S+\.meta.json$', fname):
+            continue # skip meta data files
+        if not bool(re.search(r'\S+\.\S+$', fname)):
+            continue # skip files that don't look like foooo.bar
+        has_meta_data = os.path.exists(
+            os.path.join(OUT_DIR, fname + ".meta.json")
+        )
+        meta_data = {}
+        if has_meta_data:
+            with open(os.path.join(OUT_DIR, fname + ".meta.json")) as fp:
+                meta_data = json.load(fp)
+            if 'ocr' in meta_data:
+                del meta_data['ocr']
+                meta_data['ocr'] = True
+            else:
+                meta_data['ocr'] = False
 
+        print(
+            os.path.join(OUT_DIR, fname) if fullpaths else fname,
+            meta_data,
+        )
+
+
+def command_list_tags():
+    counts = Counter()
+    for fname in os.listdir(OUT_DIR):
+        if fname.endswith(".meta.json"):
+            with open(os.path.join(OUT_DIR, fname)) as fp:
+                data = json.load(fp)
+            for label in data['labels']:
+                counts[label] += 1
+
+    counts = [(k, v) for k, v in counts.items()]
+    counts.sort(key=lambda t: t[1], reverse=True)
+    for (k, v) in counts:
+        print(v, k)
 
 def main():
-    print("Parsing arguments")
-
     parser = argparse.ArgumentParser()
     parser.add_argument("command")
+    parser.add_argument("--verbose", "-v", action="store_true", default=False)
     args, _ = parser.parse_known_args()
+
+    if args.verbose:
+        print("OUT_DIR", OUT_DIR)
+        print('SCANNER_DEFAULT_DEVICE', os.environ.get('SCANNER_DEFAULT_DEVICE'))
 
     if args.command == 'scan':
 
@@ -121,6 +176,7 @@ def main():
 
         parser = argparse.ArgumentParser()
         parser.add_argument("command")
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
         parser.add_argument("--name", "-n", default=None)
         parser.add_argument("--labels", "-l", nargs='*', default=[])
         parser.add_argument("--ocr", "-o", action='store_true', default=False)
@@ -133,7 +189,8 @@ def main():
             print(f"Error: invalid resolution. Use: {USABLE_RESOLUTIONS}")
             sys.exit(128)
 
-        print('arguments ', args)
+        if args.verbose:
+            print('arguments ', args)
         command_scan(
             device_name,
             args.name,
@@ -141,10 +198,33 @@ def main():
             args.resolution,
             args.ocr,
             args.many,
-            args.color
+            args.color,
+            args.verbose,
         )
 
+    elif args.command == 'ls':
+        print("contents of ", OUT_DIR)
+        os.system(f"ls -lh {OUT_DIR}")
 
+    elif args.command == 'tags':
+        if args.verbose:
+            print('arguments ', args)
+        command_list_tags()
+
+    elif args.command == 'files':
+        parser = argparse.ArgumentParser()
+        parser.add_argument("command")
+        parser.add_argument("--verbose", "-v", action="store_true", default=False)
+        parser.add_argument("--fullpaths", "-f", action="store_true", default=False)
+        args = parser.parse_args()
+        if args.verbose:
+            print('arguments ', args)
+
+        command_list_files(args.fullpaths)
+
+    else:
+        print("Error: unknown command")
+        sys.exit(128)
 
 if __name__ == "__main__":
     main()

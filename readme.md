@@ -21,20 +21,40 @@ sudo apt install tesseract-ocr
 
 ```bash
 # scan options
--n --name file name                  # file name root
--l --labels label1 label2 .. labeln  # meta data labels for the document(s)
--o --ocr                             # process with OCR engine (default = No)
--m --many                            # scan multiple pages (default = No)
--r --resolution 75|150|300           # DPI value (default = 150)
--c --color Gray|Color                # color mode (default = Gray)
+
+-n --name outfile_name_root    # file name root
+-l --labels label1 label2 ...  # meta data labels for the document(s)
+-r --resolution 75|150|300     # DPI value (default = 150)
+-o --ocr                       # process with OCR engine (default = No)
+-m --many                      # scan multiple pages (default = No)
+-c --color                     # color mode
 
 # scan usage
-scancli scan
-scancli scan --resolution 300
-scancli scan -n 'paystub-feb-2023-1' --ocr
-scancli scan -n 'paystub-feb-2023-1' -l 2023 paystub 'XYZ Corp'
-scancli scan -n 'tax-return-2023' -l 2023 tax --many
+doccli scan
+doccli scan --resolution 300
+doccli scan -n 'paystub-feb-2023-1' --ocr
+doccli scan -n 'paystub-feb-2023-1' -l 2023 paystub 'XYZ Corp'
+doccli scan -n 'tax-return-2023' -l 2023 tax --many
 
+```
+
+```bash
+# show all tags in use
+doccli tags
+```
+
+```bash
+# list files options
+
+-f --fullpaths # show full paths
+
+doccli files
+doccli files --fullpaths
+```
+
+```bash
+# show all files in doccli's data directory
+doccli ls
 ```
 
 <hr>
