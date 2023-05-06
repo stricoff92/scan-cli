@@ -5,6 +5,7 @@
 
 import argparse
 from collections import Counter
+from copy import deepcopy
 import datetime as dt
 import json
 import os
@@ -34,6 +35,17 @@ def clean_ocr_text(v: str) -> str:
         text += ''.join(c for c in l if ord(c) <= 127) + " "
     return re.sub(' +', ' ', text)
 
+def apply_macros(file_name_root: str) -> str:
+    name = deepcopy(file_name_root)
+    if 'DATE' in name:
+        name = name.replace("DATE", dt.date.today().strftime('%b_%d_%Y'))
+    if 'TIME' in name:
+        name = name.replace("TIME", dt.datetime.now().strftime('%H-%M-%S'))
+    if 'UID' in name:
+        name = name.replace("UID", str(uuid.uuid4())[:6])
+    return name
+
+
 def command_scan(
     device: str,
     file_name: Optional[str],
@@ -54,6 +66,8 @@ def command_scan(
     if ' ' in out_file_name:
         print("error: file name cannot contain ' '")
         sys.exit(128)
+
+    out_file_name = apply_macros(out_file_name)
 
     command = f"scanimage -d '{device}' --resolution {resolution} --mode {'Color' if color else 'Gray' }"
     if many:
@@ -102,19 +116,19 @@ def command_scan(
     else:
         meta_file_full_path = full_out_file + ".meta.json"
         data = {
+            'created': dt.datetime.now().isoformat(),
             'labels':labels,
         }
         if ocr:
             ocr_out_file = f'/tmp/{uuid.uuid4()}'
             ocr_command = f'tesseract {full_out_file} {ocr_out_file}'
             if verbose:
-                print("executing command " + ocr_command)
+                print("RUNNING COMMAND: " + ocr_command)
             else:
                 ocr_command += " > /dev/null 2>&1"
             exit_code = os.system(ocr_command)
             if verbose:
                 print("exit code", exit_code)
-            data['ocr'] = ''
             with open(ocr_out_file  + ".txt") as f:
                 data['ocr'] = clean_ocr_text(f.read())
             os.remove(ocr_out_file + ".txt")
@@ -135,7 +149,6 @@ def command_list_files(fullpaths: bool):
             with open(os.path.join(OUT_DIR, fname + ".meta.json")) as fp:
                 meta_data = json.load(fp)
             if 'ocr' in meta_data:
-                del meta_data['ocr']
                 meta_data['ocr'] = True
             else:
                 meta_data['ocr'] = False
